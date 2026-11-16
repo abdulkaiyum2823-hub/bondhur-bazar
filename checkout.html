@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>চেকআউট | বন্ধুর বাজার</title>
+<meta name="description" content="ডেলিভারির তথ্য দিয়ে অর্ডার সম্পন্ন করুন।">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#1E7A3A">
+<link rel="icon" href="assets/favicon.png" type="image/png">
+
+<!-- Facebook / সোশ্যাল শেয়ার প্রিভিউ (Open Graph) -->
+<!-- ⚠️ প্রকাশের পর নিচের "https://abdulkaiyum2823-hub.github.io/bondhur-bazar/" আপনার আসল লিংক দিয়ে বদলান (README দেখুন) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="বন্ধুর বাজার (Bondhur Bazar)">
+<meta property="og:locale" content="bn_BD">
+<meta property="og:title" content="চেকআউট | বন্ধুর বাজার">
+<meta property="og:description" content="ডেলিভারির তথ্য দিয়ে অর্ডার সম্পন্ন করুন।">
+<meta property="og:url" content="https://abdulkaiyum2823-hub.github.io/bondhur-bazar/checkout.html">
+<meta property="og:image" content="https://abdulkaiyum2823-hub.github.io/bondhur-bazar/assets/og-image.jpg">
+<meta name="twitter:card" content="summary_large_image">
+
+<!-- বিনামূল্যের Google Fonts (বাংলা ফন্ট: Hind Siliguri) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="checkout">
+<a class="skip-link" href="#main">মূল অংশে যান</a>
+<header class="site-header" id="site-header"></header>
+<main id="main">
+
+<div class="page-head"><div class="container"><h1>চেকআউট</h1></div></div>
+<div class="container"><div id="checkoutHost">
+  <div class="checkout-layout">
+    <form id="orderForm" class="form-box" novalidate>
+      <h2>ডেলিভারির তথ্য</h2>
+      <div class="form-grid">
+        <div class="field"><label for="name">আপনার নাম <span class="req">*</span></label>
+          <input class="input" id="name" name="name" type="text" autocomplete="name" placeholder="যেমন: রহিম উদ্দিন">
+          <p class="err" id="err-name" role="alert"></p></div>
+        <div class="field"><label for="phone">মোবাইল নম্বর <span class="req">*</span></label>
+          <input class="input" id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="যেমন: 01712345678">
+          <p class="err" id="err-phone" role="alert"></p></div>
+        <div class="field"><label for="address">সম্পূর্ণ ঠিকানা <span class="req">*</span></label>
+          <textarea class="input" id="address" name="address" autocomplete="street-address" placeholder="বাড়ি/রাস্তা/গ্রাম/এলাকা"></textarea>
+          <p class="err" id="err-address" role="alert"></p></div>
+        <div class="form-grid two">
+          <div class="field"><label for="district">জেলা <span class="req">*</span></label>
+            <select class="select" id="district" name="district"></select>
+            <p class="err" id="err-district" role="alert"></p></div>
+          <div class="field"><label for="upazila">উপজেলা / থানা <span class="req">*</span></label>
+            <input class="input" id="upazila" name="upazila" type="text" placeholder="উপজেলা বা থানার নাম">
+            <p class="err" id="err-upazila" role="alert"></p></div>
+        </div>
+        <div class="field"><label for="note">বিশেষ নির্দেশনা (ঐচ্ছিক)</label>
+          <textarea class="input" id="note" name="note" placeholder="কিছু জানাতে চাইলে লিখুন"></textarea></div>
+      </div>
+      <p class="hint" id="paymentNote"></p>
+      <button class="btn btn-wa btn-lg btn-block" type="submit">WhatsApp-এ অর্ডার পাঠান</button>
+      <p class="hint" style="margin-top:10px">বাটনে চাপলে WhatsApp-এ আপনার অর্ডারের মেসেজ তৈরি হবে। সেখানে “Send” চাপলেই অর্ডার আমাদের কাছে পৌঁছাবে।</p>
+    </form>
+    <aside class="summary">
+      <h2>অর্ডারের সারাংশ</h2>
+      <div id="sumItems"></div>
+      <div class="sum-row"><span>পণ্যের মূল্য</span><strong id="sumSub"></strong></div>
+      <div class="sum-row"><span>ডেলিভারি চার্জ</span><strong id="sumDel"></strong></div>
+      <div class="sum-row sum-total"><span>সর্বমোট</span><strong id="sumTotal"></strong></div>
+      <a class="btn btn-outline btn-block" href="cart.html">কার্টে ফিরে যান</a>
+    </aside>
+  </div>
+</div></div>
+
+</main>
+<footer class="site-footer" id="site-footer"></footer>
+<noscript><p style="padding:16px;text-align:center">এই ওয়েবসাইট চালাতে JavaScript চালু থাকা দরকার।</p></noscript>
+<script src="js/config.js"></script>
+<script src="js/products.js"></script>
+<script src="js/app.js"></script>
+<script src="js/pages.js"></script>
+</body>
+</html>

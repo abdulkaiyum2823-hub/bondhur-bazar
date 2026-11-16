@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>যোগাযোগ | বন্ধুর বাজার</title>
+<meta name="description" content="বন্ধুর বাজারের সঙ্গে WhatsApp ও Facebook-এ যোগাযোগ করুন।">
+<meta name="theme-color" content="#1E7A3A">
+<link rel="icon" href="assets/favicon.png" type="image/png">
+
+<!-- Facebook / সোশ্যাল শেয়ার প্রিভিউ (Open Graph) -->
+<!-- ⚠️ প্রকাশের পর নিচের "https://abdulkaiyum2823-hub.github.io/bondhur-bazar/" আপনার আসল লিংক দিয়ে বদলান (README দেখুন) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="বন্ধুর বাজার (Bondhur Bazar)">
+<meta property="og:locale" content="bn_BD">
+<meta property="og:title" content="যোগাযোগ | বন্ধুর বাজার">
+<meta property="og:description" content="বন্ধুর বাজারের সঙ্গে WhatsApp ও Facebook-এ যোগাযোগ করুন।">
+<meta property="og:url" content="https://abdulkaiyum2823-hub.github.io/bondhur-bazar/contact.html">
+<meta property="og:image" content="https://abdulkaiyum2823-hub.github.io/bondhur-bazar/assets/og-image.jpg">
+<meta name="twitter:card" content="summary_large_image">
+
+<!-- বিনামূল্যের Google Fonts (বাংলা ফন্ট: Hind Siliguri) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="contact">
+<a class="skip-link" href="#main">মূল অংশে যান</a>
+<header class="site-header" id="site-header"></header>
+<main id="main">
+
+<div class="page-head"><div class="container"><h1>যোগাযোগ</h1></div></div>
+<section class="section"><div class="container split" style="align-items:start">
+  <div>
+    <h2>সরাসরি যোগাযোগ</h2>
+    <div class="feature" style="margin-bottom:12px"><h3>WhatsApp</h3><p id="waNum"></p>
+      <a class="btn btn-wa" id="waBig" target="_blank" rel="noopener" data-wa href="https://wa.me/8801602975419">WhatsApp-এ মেসেজ করুন</a></div>
+    <div class="feature"><h3>Facebook পেজ</h3><p id="fbName"></p>
+      <a class="btn btn-outline" id="fbBig" target="_blank" rel="noopener" data-fb href="https://www.facebook.com/BondhurBazarbd">Facebook পেজে যান</a></div>
+    <p class="muted" style="margin-top:14px">ডেলিভারি: সারা বাংলাদেশ।</p>
+  </div>
+  <form id="msgForm" class="form-box" novalidate>
+    <h2>মেসেজ পাঠান</h2>
+    <div class="form-grid">
+      <div class="field"><label for="cname">আপনার নাম</label><input class="input" id="cname" name="name" type="text" autocomplete="name"><p class="err" id="err-cname" role="alert"></p></div>
+      <div class="field"><label for="cmsg">আপনার বার্তা</label><textarea class="input" id="cmsg" name="message"></textarea><p class="err" id="err-cmsg" role="alert"></p></div>
+    </div>
+    <button class="btn btn-wa btn-block" type="submit">WhatsApp-এ পাঠান</button>
+    <p class="hint" style="margin-top:8px">বাটনে চাপলে WhatsApp-এ আপনার বার্তা তৈরি হবে।</p>
+  </form>
+</div></section>
+
+</main>
+<footer class="site-footer" id="site-footer"></footer>
+<noscript><p style="padding:16px;text-align:center">এই ওয়েবসাইট চালাতে JavaScript চালু থাকা দরকার।</p></noscript>
+<script src="js/config.js"></script>
+<script src="js/products.js"></script>
+<script src="js/app.js"></script>
+<script src="js/pages.js"></script>
+</body>
+</html>
