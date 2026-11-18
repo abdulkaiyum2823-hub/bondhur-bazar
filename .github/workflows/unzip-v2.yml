@@ -1,0 +1,28 @@
+name: Unzip site v2
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  unzip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract any zip in repo root
+        run: |
+          shopt -s nullglob
+          zips=(*.zip)
+          if [ ${#zips[@]} -eq 0 ]; then echo "no zip"; exit 0; fi
+          mkdir /tmp/x
+          for z in "${zips[@]}"; do unzip -oq "$z" -d /tmp/x; done
+          src=/tmp/x
+          if [ "$(ls -A /tmp/x | wc -l)" = "1" ] && [ -d "/tmp/x/$(ls /tmp/x)" ]; then src="/tmp/x/$(ls /tmp/x)"; fi
+          cp -a "$src"/. .
+          rm -f -- *.zip keepalive.yml
+          git config user.name "site-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add -A
+          git commit -m "Extract website files (v2)" || exit 0
+          git push
