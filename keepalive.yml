@@ -1,0 +1,29 @@
+name: Supabase keepalive
+# প্রতিদিন Supabase-কে একবার ডাকে, যাতে ফ্রি প্রজেক্ট ১ সপ্তাহ নিষ্ক্রিয় থেকে পজ না হয়।
+# ⚠️ এটি সহায়ক ব্যবস্থা মাত্র, শতভাগ নিশ্চয়তা নয় (GitHub শিডিউল দেরি/বন্ধ হতে পারে)।
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ping Supabase
+        run: |
+          URL=$(grep -oE 'https://[a-z0-9-]+\.supabase\.co' js/supabase-config.js | head -1)
+          KEY=$(grep -oE 'anonKey: *"[^"]+"' js/supabase-config.js | sed -E 's/.*"([^"]+)"/\1/')
+          if [ -z "$URL" ] || [ -z "$KEY" ]; then echo "Supabase এখনো সেট করা হয়নি – বাদ"; exit 0; fi
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$URL/rest/v1/settings?select=key&limit=1" -H "apikey: $KEY" -H "Authorization: Bearer $KEY")
+          echo "HTTP $code"
+          test "$code" = "200"
+      - name: Monthly commit (শিডিউল যেন ৬০ দিনে অটো-বন্ধ না হয়)
+        run: |
+          if [ "$(date +%d)" = "01" ]; then
+            date -u > .keepalive
+            git config user.name "keepalive-bot"; git config user.email "bot@users.noreply.github.com"
+            git add .keepalive; git commit -m "keepalive $(date -u +%F)" || exit 0; git push
+          fi
