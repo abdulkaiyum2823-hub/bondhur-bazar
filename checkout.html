@@ -57,9 +57,34 @@
         <div class="field"><label for="note">বিশেষ নির্দেশনা (ঐচ্ছিক)</label>
           <textarea class="input" id="note" name="note" placeholder="কিছু জানাতে চাইলে লিখুন"></textarea></div>
       </div>
+      <p class="notice-inline" id="offlineNote" hidden>⚠️ অনলাইন অর্ডার সিস্টেম এখনো চালু হয়নি। বাটনে চাপলে WhatsApp-এ মেসেজ তৈরি হবে; সেখানে “Send” চাপলে অর্ডার আমাদের কাছে যাবে (এই অর্ডার নম্বর পাবেন না)।</p>
+      <input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
+      <fieldset class="pay-box" id="payBox" hidden>
+        <legend>পেমেন্ট পদ্ধতি</legend>
+        <label class="pay-opt"><input type="radio" name="pay" id="payCod" value="cod" checked>
+          <span><strong>ক্যাশ অন ডেলিভারি</strong><small>পণ্য হাতে পেয়ে টাকা দিন</small></span></label>
+        <label class="pay-opt"><input type="radio" name="pay" id="payBkash" value="bkash">
+          <span><strong>bKash (Personal – Send Money)</strong><small>আগে টাকা পাঠিয়ে TrxID দিন</small></span></label>
+        <div class="bk-panel" id="bkDelivery" hidden>
+          <p>ডেলিভারি চার্জ এখনো নির্ধারিত নয় (জেলা বেছে নিন, অথবা চার্জ আমরা অর্ডারের পর জানাব)। মোট টাকা নিশ্চিত না হওয়া পর্যন্ত bKash পেমেন্ট নেওয়া যাচ্ছে না – অনুগ্রহ করে <b>ক্যাশ অন ডেলিভারি</b> বেছে নিন।</p>
+        </div>
+        <div class="bk-panel" id="bkFields" hidden>
+          <ol class="bk-steps">
+            <li>bKash অ্যাপ/USSD থেকে <b>Send Money</b> দিয়ে <b class="bk-num" id="bkNum"></b> নম্বরে <b id="bkAmount"></b> পাঠান। <small id="bkType"></small>
+              <button type="button" class="btn btn-sm btn-outline" id="bkCopy">নম্বর কপি</button></li>
+            <li>পাঠানো শেষে পাওয়া <b>TrxID</b> এবং যে নম্বর থেকে পাঠিয়েছেন তা নিচে লিখুন।</li>
+          </ol>
+          <div class="field"><label for="bkTxn">bKash TrxID <span class="req">*</span></label>
+            <input class="input" id="bkTxn" name="bkTxn" type="text" autocomplete="off" autocapitalize="characters" maxlength="24" placeholder="যেমন: 9A7B3C2D1E">
+            <p class="err" id="err-bkTxn" role="alert"></p></div>
+          <div class="field"><label for="bkSender">যে নম্বর থেকে টাকা পাঠিয়েছেন <span class="req">*</span></label>
+            <input class="input" id="bkSender" name="bkSender" type="tel" inputmode="tel" placeholder="যেমন: 01712345678">
+            <p class="err" id="err-bkSender" role="alert"></p></div>
+          <p class="hint">⚠️ এই যাচাই স্বয়ংক্রিয় নয়। আমরা নিজে হাতে মিলিয়ে দেখব; ততক্ষণ স্ট্যাটাস “যাচাইয়ের অপেক্ষায়” থাকবে। ভুল TrxID দিলে অর্ডার আটকে যেতে পারে।</p>
+        </div>
+      </fieldset>
       <p class="hint" id="paymentNote"></p>
-      <button class="btn btn-wa btn-lg btn-block" type="submit">WhatsApp-এ অর্ডার পাঠান</button>
-      <p class="hint" style="margin-top:10px">বাটনে চাপলে WhatsApp-এ আপনার অর্ডারের মেসেজ তৈরি হবে। সেখানে “Send” চাপলেই অর্ডার আমাদের কাছে পৌঁছাবে।</p>
+      <button class="btn btn-gold btn-lg btn-block" id="submitBtn" type="submit">অর্ডার পর্যালোচনা করুন</button>
     </form>
     <aside class="summary">
       <h2>অর্ডারের সারাংশ</h2>
@@ -76,7 +101,9 @@
 <footer class="site-footer" id="site-footer"></footer>
 <noscript><p style="padding:16px;text-align:center">এই ওয়েবসাইট চালাতে JavaScript চালু থাকা দরকার।</p></noscript>
 <script src="js/config.js"></script>
+<script src="js/supabase-config.js"></script>
 <script src="js/products.js"></script>
+<script src="js/api.js"></script>
 <script src="js/app.js"></script>
 <script src="js/pages.js"></script>
 </body>

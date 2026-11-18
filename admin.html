@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>পণ্যের কোড বানান | বন্ধুর বাজার</title>
+<title>অ্যাডমিন | বন্ধুর বাজার</title>
 <meta name="description" content="নতুন পণ্যের কোড তৈরির সহায়ক পেজ।">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#1E7A3A">
@@ -26,49 +26,16 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="css/style.css">
 </head>
-<body data-page="admin">
+<body data-page="adminstub">
 <a class="skip-link" href="#main">মূল অংশে যান</a>
 <header class="site-header" id="site-header"></header>
-<main id="main">
-
-<div class="page-head"><div class="container"><h1>নতুন পণ্যের কোড বানান</h1></div></div>
-<section class="section"><div class="container" style="max-width:760px">
-  <p>ফর্ম পূরণ করে “কোড তৈরি করুন” চাপুন। তারপর কোডটি কপি করে <b>js/products.js</b> ফাইলে শেষ <code>];</code>-এর ঠিক আগে বসান। (এটি শুধু কোড বানানোর সহায়ক – এখান থেকে সরাসরি পণ্য সেভ হয় না।)</p>
-  <form id="adminForm" class="form-box" novalidate>
-    <div class="form-grid">
-      <div class="field"><label>পণ্যের id (ইংরেজি, যেমন: sundarban-honey)</label><input class="input" name="id"></div>
-      <div class="field"><label>পণ্যের নাম</label><input class="input" name="name"></div>
-      <div class="form-grid two">
-        <div class="field"><label>ক্যাটাগরি</label><select class="select" name="category" id="a_cat"></select></div>
-        <div class="field"><label>প্রতি ১ কেজির দাম (টাকা)</label><input class="input" name="price" type="number" inputmode="decimal" min="1"></div>
-      </div>
-      <div class="form-grid two">
-        <div class="field"><label>একক</label><input class="input" name="unit" value="কেজি"></div>
-        <div class="field"><label>কত ওজনে বিক্রি (কমা দিয়ে)</label><input class="input" name="sizes" value="0.25, 0.5, 1"></div>
-      </div>
-      <div class="field"><label>ছবির ফাইলের নাম (images/products/ ফোল্ডারে)</label><input class="input" name="image" placeholder="যেমন: sundarban-honey.jpg"></div>
-      <div class="field"><label>সংক্ষিপ্ত বিবরণ</label><input class="input" name="short"></div>
-      <div class="field"><label>বিস্তারিত বিবরণ</label><textarea class="input" name="description"></textarea></div>
-      <div class="field"><label>বৈশিষ্ট্য (প্রতি লাইনে একটি)</label><textarea class="input" name="features"></textarea></div>
-      <label><input type="checkbox" name="popular"> জনপ্রিয় পণ্য</label>
-      <label><input type="checkbox" name="isNew" checked> নতুন পণ্য</label>
-    </div>
-    <p class="err" id="a_err" role="alert"></p>
-    <button class="btn btn-block" type="submit">কোড তৈরি করুন</button>
-  </form>
-  <div id="a_result" hidden style="margin-top:20px">
-    <h2>আপনার কোড</h2>
-    <textarea class="input" id="a_out" rows="14" readonly style="font-family:monospace;font-size:.85rem"></textarea>
-    <button class="btn btn-gold btn-block" id="a_copy" type="button">কোড কপি করুন</button>
-    <p class="hint">এই পণ্যের আলাদা বিজ্ঞাপনী পেজের লিংক: <code id="a_link"></code></p>
-  </div>
-</div></section>
-
-</main>
+<main id="main"><div class="container narrow"><div class="notice"><h2>অ্যাডমিন ড্যাশবোর্ড</h2><p>অ্যাডমিন ড্যাশবোর্ড ধাপ ২-এ যোগ হবে। তার আগে অর্ডার Supabase-এর Table Editor-এ দেখা যাবে।</p><a class="btn" href="index.html">হোমে ফিরুন</a></div></div></main>
 <footer class="site-footer" id="site-footer"></footer>
 <noscript><p style="padding:16px;text-align:center">এই ওয়েবসাইট চালাতে JavaScript চালু থাকা দরকার।</p></noscript>
 <script src="js/config.js"></script>
+<script src="js/supabase-config.js"></script>
 <script src="js/products.js"></script>
+<script src="js/api.js"></script>
 <script src="js/app.js"></script>
 <script src="js/pages.js"></script>
 </body>

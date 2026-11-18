@@ -49,6 +49,12 @@
         })
         .join("");
 
+    var offers = B.PRODUCTS.filter(function (p) { return B.hasOffer(p) && p.inStock !== false; }).slice(0, 8);
+    var offerSec = $("#offerSection");
+    if (offerSec) {
+      offerSec.hidden = !offers.length;
+      grid($("#offerGrid"), offers);
+    }
     grid($("#popularGrid"), B.PRODUCTS.filter(function (p) { return p.popular; }).slice(0, 8));
     grid($("#newGrid"), B.PRODUCTS.filter(function (p) { return p.isNew; }).slice(0, 4), "শীঘ্রই নতুন পণ্য আসছে।");
 
@@ -197,6 +203,7 @@
         if (state.cat && p.category !== state.cat) return false;
         if (state.filter === "popular" && !p.popular) return false;
         if (state.filter === "new" && !p.isNew) return false;
+        if (state.filter === "offer" && !B.hasOffer(p)) return false;
         if (q) {
           var hay = (p.name + " " + (p.short || "") + " " + B.getCategory(p.category).name + " " + p.id).toLowerCase();
           if (hay.indexOf(q) === -1) return false;
@@ -205,8 +212,8 @@
       });
       var s = state.sort;
       list = list.slice();
-      if (s === "price-asc") list.sort(function (a, b) { return a.price - b.price; });
-      else if (s === "price-desc") list.sort(function (a, b) { return b.price - a.price; });
+      if (s === "price-asc") list.sort(function (a, b) { return B.unitBase(a) - B.unitBase(b); });
+      else if (s === "price-desc") list.sort(function (a, b) { return B.unitBase(b) - B.unitBase(a); });
       else if (s === "popular") list.sort(function (a, b) { return (b.popular ? 1 : 0) - (a.popular ? 1 : 0); });
       else if (s === "new") list.sort(function (a, b) { return (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0); });
 
@@ -214,6 +221,7 @@
       var label = state.cat ? B.getCategory(state.cat).name : "সব পণ্য";
       if (state.filter === "popular") label += " (জনপ্রিয়)";
       if (state.filter === "new") label += " (নতুন)";
+      if (state.filter === "offer") label += " (অফার)";
       countEl.textContent = label + " – " + B.toBn(list.length) + "টি পণ্য";
 
       Array.prototype.forEach.call(chips.children, function (c) {
@@ -322,7 +330,7 @@
       '<div class="pd-media"><img id="pdImg" src="' + esc(img) + '" alt="' + esc(p.name) + '" data-ph="' + esc(p.id) + '"></div>' +
       '<div class="pd-info">' +
       '<div class="crumbs"><a href="index.html">হোম</a> › <a href="shop.html?cat=' + encodeURIComponent(p.category) + '">' + esc(cat.name) + "</a></div>" +
-      "<h1>" + esc(isLanding && L.headline ? L.headline : p.name) + "</h1>" +
+      '<div class="pd-title"><h1>' + esc(isLanding && L.headline ? L.headline : p.name) + "</h1>" + B.heartBtn(p.id) + "</div>" +
       (isLanding && L.subheadline ? '<p class="lead">' + esc(L.subheadline) + "</p>" : '<p class="lead">' + esc(p.short || "") + "</p>") +
       '<div class="pd-price" id="pdPrice"></div>' +
       '<div class="pd-label">পরিমাণ বেছে নিন</div>' +
@@ -348,7 +356,9 @@
 
     function refresh() {
       $("#pdPrice").innerHTML =
-        "<strong>" + B.money(B.priceFor(p, cur) * qty) + "</strong> <small>(" + B.sizeLabel(p, cur) + " × " + B.toBn(qty) + ")</small>";
+        "<strong>" + B.money(B.priceFor(p, cur) * qty) + "</strong> " +
+        (B.hasOffer(p) ? '<del class="price-old">' + B.money(B.regularPriceFor(p, cur) * qty) + "</del> " : "") +
+        "<small>(" + B.sizeLabel(p, cur) + " × " + B.toBn(qty) + ")</small>";
       Array.prototype.forEach.call($("#sizes").children, function (b) {
         var on = Number(b.getAttribute("data-size")) === cur;
         b.classList.toggle("active", on);
@@ -380,6 +390,7 @@
     $("#shareFb").href = "https://www.facebook.com/sharer/sharer.php?u=" + encodeURIComponent(pageUrl);
     $("#shareWa").href = "https://wa.me/?text=" + encodeURIComponent(p.name + " – " + pageUrl);
     refresh();
+    B.Wish.refresh();
   }
 
   /* ============================ ল্যান্ডিং পেজ ============================ */
@@ -472,6 +483,67 @@
     render();
   }
 
+  /* ---------- সাধারণ: মডাল ---------- */
+  function openModal(html, onClose) {
+    var back = document.createElement("div");
+    back.className = "modal-back";
+    back.innerHTML = '<div class="modal" role="dialog" aria-modal="true" tabindex="-1">' + html + "</div>";
+    document.body.appendChild(back);
+    document.body.classList.add("modal-open");
+    var box = back.firstChild;
+    var prev = document.activeElement;
+    function close() {
+      document.removeEventListener("keydown", key);
+      back.remove();
+      document.body.classList.remove("modal-open");
+      if (prev && prev.focus) prev.focus();
+      if (onClose) onClose();
+    }
+    function key(e) { if (e.key === "Escape") close(); }
+    document.addEventListener("keydown", key);
+    back.addEventListener("click", function (e) { if (e.target === back) close(); });
+    setTimeout(function () { box.focus(); }, 30);
+    return { el: box, close: close };
+  }
+
+  var ERR = {
+    invalid_name: "নাম সঠিক নয়।", invalid_phone: "মোবাইল নম্বর সঠিক নয়।", invalid_district: "জেলা সঠিক নয়।",
+    invalid_upazila: "উপজেলা সঠিক নয়।", invalid_address: "ঠিকানা সঠিক নয় (কমপক্ষে ১০ অক্ষর)।",
+    invalid_note: "নোট খুব বড় (সর্বোচ্চ ৫০০ অক্ষর)।", invalid_items: "কার্টের পণ্যে সমস্যা আছে। কার্ট দেখে আবার চেষ্টা করুন।",
+    product_missing: "কার্টের কোনো পণ্য এখন আর পাওয়া যাচ্ছে না। কার্ট দেখে নিন।",
+    out_of_stock: "পণ্যটি এখন স্টকে নেই", invalid_size: "পণ্যের পরিমাণ সঠিক নয়",
+    delivery_not_set: "ডেলিভারি চার্জ এখনো নির্ধারিত নয়, তাই bKash পেমেন্ট এখন নেওয়া যাচ্ছে না। ক্যাশ অন ডেলিভারি বেছে নিন।",
+    payment_disabled: "এই পেমেন্ট পদ্ধতি এখন বন্ধ আছে। অন্য পদ্ধতি বেছে নিন।", invalid_payment: "পেমেন্ট পদ্ধতি বেছে নিন।",
+    invalid_txn: "bKash TrxID সঠিক নয় (৬–২০টি ইংরেজি অক্ষর/সংখ্যা)।", invalid_sender: "যে নম্বর থেকে টাকা পাঠিয়েছেন তা সঠিক নয়।",
+    too_many_orders: "অল্প সময়ে অনেক অর্ডার হয়ে গেছে। কিছুক্ষণ পর আবার চেষ্টা করুন, বা WhatsApp-এ জানান।",
+    busy: "এখন সার্ভার ব্যস্ত। কিছুক্ষণ পর আবার চেষ্টা করুন।", invalid: "অর্ডার তৈরি করা যায়নি। তথ্য দেখে আবার চেষ্টা করুন।",
+    network: "ইন্টারনেট সংযোগে সমস্যা। সংযোগ দেখে আবার চেষ্টা করুন (অর্ডার তৈরি হয়ে থাকলে ডুপ্লিকেট এড়াতে আগে অর্ডার ট্র্যাক পেজ দেখুন)।",
+    server: "সার্ভারে সমস্যা হয়েছে। একটু পরে আবার চেষ্টা করুন।",
+  };
+  function errText(r) {
+    var t = ERR[r.code] || ERR.server;
+    return r.arg && (r.code === "out_of_stock" || r.code === "invalid_size") ? t + ": " + r.arg : t;
+  }
+
+  var STATUS = {
+    pending: "অর্ডার গৃহীত – কনফার্মেশনের অপেক্ষায়", payment_pending: "bKash পেমেন্ট যাচাইয়ের অপেক্ষায়", paid: "পেমেন্ট নিশ্চিত",
+    processing: "প্রস্তুত করা হচ্ছে", shipped: "ডেলিভারির জন্য পাঠানো হয়েছে", delivered: "ডেলিভারি সম্পন্ন", cancelled: "বাতিল",
+  };
+  var PAYSTAT = {
+    pending: "পেমেন্ট বাকি (ডেলিভারির সময় দিবেন)", pending_verification: "যাচাইয়ের অপেক্ষায় (Pending Verification)",
+    paid: "পরিশোধিত", rejected: "যাচাইয়ে মেলেনি", refunded: "ফেরত দেওয়া হয়েছে",
+  };
+
+  function bn(n) { return B.toBn(n); }
+  function fmtDate(iso) {
+    try {
+      return new Date(iso).toLocaleString("bn-BD", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Dhaka" });
+    } catch (e) { return iso; }
+  }
+  function delText(del, pending) {
+    return pending ? "পরে জানানো হবে" : del === 0 ? "ফ্রি" : B.money(del);
+  }
+
   /* ============================ চেকআউট ============================ */
   function pageCheckout() {
     var host = $("#checkoutHost");
@@ -483,37 +555,62 @@
     }
     var form = $("#orderForm");
     var dSel = $("#district");
+    var districts = CFG.districts || DISTRICTS;
     dSel.innerHTML =
       '<option value="">— জেলা বেছে নিন —</option>' +
-      DISTRICTS.map(function (d) { return '<option value="' + d + '">' + d + "</option>"; }).join("");
-    $("#paymentNote").textContent = CFG.paymentNote;
+      districts.map(function (d) { return '<option value="' + esc(d) + '">' + esc(d) + "</option>"; }).join("");
+    var live = !!CFG.dbConnected;
+    var PAY = CFG.payment || {};
+    $("#offlineNote").hidden = live;
+    $("#payBox").hidden = !live;
+    $("#paymentNote").textContent = live
+      ? "পেমেন্ট পদ্ধতি বেছে অর্ডার করুন। অর্ডারের পর আমরা আপনার সঙ্গে যোগাযোগ করে কনফার্ম করব।"
+      : "";
+    $("#submitBtn").textContent = live ? "অর্ডার পর্যালোচনা করুন" : "WhatsApp-এ অর্ডার পাঠান";
 
-    /* আগের তথ্য মনে রাখা (সুবিধার জন্য) */
     var saved = B.store("bb_customer_v1");
-    if (saved) {
+    if (saved)
       ["name", "phone", "address", "district", "upazila"].forEach(function (k) {
         if (saved[k] && form.elements[k]) form.elements[k].value = saved[k];
       });
-    }
+
+    /* পেমেন্ট বিকল্প */
+    var codOpt = $("#payCod"), bkOpt = $("#payBkash");
+    codOpt.closest(".pay-opt").hidden = PAY.codEnabled === false;
+    bkOpt.closest(".pay-opt").hidden = PAY.bkashEnabled === false;
+    if (PAY.codEnabled === false && PAY.bkashEnabled !== false) bkOpt.checked = true;
+    $("#bkNum").textContent = bn(PAY.bkashNumber || "01602975419");
+    $("#bkType").textContent = (PAY.bkashType || "Personal") + " – " + (PAY.bkashMethod || "Send Money");
+    $("#bkCopy").addEventListener("click", function () { copyText(PAY.bkashNumber || "01602975419"); });
+
+    function method() { return bkOpt.checked ? "bkash" : "cod"; }
 
     function summary() {
       var sub = Cart.subtotal();
-      var del = B.deliveryCharge(dSel.value, sub);
+      var di = B.deliveryInfo(dSel.value, sub);
+      var del = di.known ? di.charge : 0;
       var total = sub + del;
       $("#sumItems").innerHTML = Cart.lines()
         .map(function (l) {
           return '<div class="sum-item"><span>' + esc(l.product.name) + " <small>(" + B.sizeLabel(l.product, l.size) + " × " + B.toBn(l.qty) + ")</small></span><strong>" + B.money(l.total) + "</strong></div>";
-        })
-        .join("");
+        }).join("");
       $("#sumSub").textContent = B.money(sub);
-      $("#sumDel").textContent = dSel.value ? (del === 0 ? "ফ্রি" : B.money(del)) : B.money(del) + " (জেলা বেছে নিলে নিশ্চিত হবে)";
-      $("#sumTotal").textContent = B.money(total);
-      return { sub: sub, del: del, total: total };
+      var delEl = $("#sumDel");
+      if (!dSel.value) delEl.textContent = "জেলা বেছে নিলে জানা যাবে";
+      else if (!di.known) delEl.textContent = "অর্ডারের পর জানানো হবে";
+      else delEl.textContent = di.charge === 0 ? "ফ্রি" : B.money(di.charge);
+      $("#sumTotal").textContent = B.money(total) + (dSel.value && !di.known ? " + ডেলিভারি" : "");
+      /* bKash শুধু ডেলিভারি চার্জ জানা থাকলে */
+      var needDel = !di.known;
+      $("#bkDelivery").hidden = !(live && bkOpt.checked && needDel);
+      $("#bkFields").hidden = !(bkOpt.checked && !needDel);
+      $("#bkAmount").textContent = B.money(total);
+      return { sub: sub, di: di, del: del, total: total };
     }
     dSel.addEventListener("change", summary);
+    form.addEventListener("change", function (e) { if (e.target.name === "pay") summary(); });
     document.addEventListener("bb:cart", function () {
-      if (!Cart.count()) window.location.reload();
-      else summary();
+      if (!Cart.count()) window.location.reload(); else summary();
     });
     summary();
 
@@ -521,102 +618,275 @@
       var el = $("#err-" + name);
       var input = form.elements[name];
       if (el) el.textContent = msg || "";
-      if (input) input.setAttribute("aria-invalid", msg ? "true" : "false");
+      if (input && input.setAttribute) input.setAttribute("aria-invalid", msg ? "true" : "false");
       return !msg;
+    }
+    function normPhone(v) {
+      v = String(v || "").replace(/[\s\-]/g, "").replace(/[০-৯]/g, function (d) { return "০১২৩৪৫৬৭৮৯".indexOf(d); });
+      return v.replace(/^\+?88/, "");
     }
 
     function validate() {
       var f = form.elements;
-      var name = f.name.value.trim();
-      var phone = f.phone.value.replace(/[\s\-]/g, "");
-      /* বাংলা সংখ্যা ইংরেজিতে রূপান্তর */
-      phone = phone.replace(/[০-৯]/g, function (d) { return "০১২৩৪৫৬৭৮৯".indexOf(d); });
-      var address = f.address.value.trim();
-      var upazila = f.upazila.value.trim();
-      var ok = true;
-      var first = null;
+      var name = f.name.value.trim(), phone = normPhone(f.phone.value), address = f.address.value.trim(), upazila = f.upazila.value.trim();
+      var ok = true, first = null;
       function check(field, cond, msg) {
         var good = fieldError(field, cond ? "" : msg);
         if (!good && !first) first = f[field];
         ok = ok && good;
       }
       check("name", name.length >= 2, "আপনার নাম লিখুন (কমপক্ষে ২ অক্ষর)।");
-      check("phone", /^(?:\+?88)?01[3-9]\d{8}$/.test(phone), "সঠিক মোবাইল নম্বর দিন। যেমন: 01712345678");
+      check("phone", /^01[3-9]\d{8}$/.test(phone), "সঠিক মোবাইল নম্বর দিন। যেমন: 01712345678");
       check("address", address.length >= 10, "সম্পূর্ণ ঠিকানা লিখুন – গ্রাম/রাস্তা/বাড়ি নম্বরসহ (কমপক্ষে ১০ অক্ষর)।");
       check("district", !!f.district.value, "জেলা বেছে নিন।");
       check("upazila", upazila.length >= 2, "উপজেলা বা থানার নাম লিখুন।");
+      var data = { name: name, phone: phone, address: address, upazila: upazila, district: f.district.value, note: f.note.value.trim(), payment_method: "cod" };
+      if (live) {
+        data.payment_method = method();
+        if (data.payment_method === "bkash") {
+          var s = summary();
+          if (!s.di.known) { ok = false; B.toast("bKash-এর জন্য আগে ডেলিভারি চার্জ জানা দরকার"); }
+          var txn = f.bkTxn.value.replace(/\s/g, "").toUpperCase();
+          var sender = normPhone(f.bkSender.value);
+          check("bkTxn", /^[A-Z0-9]{6,20}$/.test(txn), "bKash-এর TrxID লিখুন (৬–২০টি ইংরেজি অক্ষর/সংখ্যা)।");
+          check("bkSender", /^01[3-9]\d{8}$/.test(sender), "যে নম্বর থেকে টাকা পাঠিয়েছেন সেটি লিখুন।");
+          data.bkash_txn = txn; data.bkash_sender = sender;
+        }
+      }
       if (first) first.focus();
-      /* মোবাইল নম্বর ০১XXXXXXXXX রূপে সাজাই */
-      phone = phone.replace(/^\+?88/, "");
-      return ok ? { name: name, phone: phone, address: address, upazila: upazila, district: f.district.value, note: f.note.value.trim() } : null;
+      return ok ? data : null;
     }
 
-    /* টাইপ করার সময় ত্রুটি মুছে যাক */
-    form.addEventListener("input", function (e) {
-      if (e.target.name) fieldError(e.target.name, "");
-    });
+    form.addEventListener("input", function (e) { if (e.target.name) fieldError(e.target.name, ""); });
 
+    var busy = false;
     form.addEventListener("submit", function (e) {
       e.preventDefault();
+      if (busy) return;
       var data = validate();
       if (!data) return;
-      var cur = Cart.lines();
-      if (!cur.length) return;
       var s = summary();
-      var now = new Date();
-      var id =
-        "BB-" + String(now.getFullYear()).slice(2) + ("0" + (now.getMonth() + 1)).slice(-2) + ("0" + now.getDate()).slice(-2) +
-        "-" + Math.floor(1000 + Math.random() * 9000);
-      var order = {
-        id: id,
-        name: data.name, phone: data.phone, address: data.address, upazila: data.upazila, district: data.district, note: data.note,
-        items: cur.map(function (l) {
-          return { id: l.product.id, name: l.product.name, sizeLabel: B.sizeLabel(l.product, l.size), qty: l.qty, unitPrice: l.unitPrice, total: l.total };
-        }),
-        subtotal: s.sub, delivery: s.del, total: s.total,
-        time: now.toISOString(),
-      };
-      order.waUrl = B.waLink(B.buildOrderMessage(order));
-
-      B.store("bb_customer_v1", { name: data.name, phone: data.phone, address: data.address, district: data.district, upazila: data.upazila });
-      B.store(B.ORDER_KEY, order);
-
-      /* WhatsApp খোলো (ক্লিকের সঙ্গে সঙ্গেই, যাতে ব্রাউজার আটকে না দেয়) */
-      var w = null;
-      try { w = window.open(order.waUrl, "_blank"); } catch (err) {}
-      Cart.clear();
-      window.location.href = "success.html" + (w ? "" : "?retry=1");
+      if (!live) return legacyWhatsApp(data, s);
+      review(data, s);
     });
+
+    /* Supabase চালু না থাকলে পুরনো পদ্ধতি: শুধু WhatsApp মেসেজ (ডাটাবেসে সেভ হয় না) */
+    function legacyWhatsApp(data, s) {
+      var m = ["🛒 *নতুন অর্ডার – " + CFG.siteName + "*", "", "👤 নাম: " + data.name, "📞 মোবাইল: " + data.phone,
+        "📍 ঠিকানা: " + data.address + ", " + data.upazila + ", " + data.district, "", "📦 পণ্য:"];
+      Cart.lines().forEach(function (l, i) {
+        m.push((i + 1) + ". " + l.product.name + " (" + B.sizeLabel(l.product, l.size) + ") × " + l.qty + " = " + B.money(l.total));
+      });
+      m.push("", "পণ্যের মূল্য: " + B.money(s.sub), "ডেলিভারি চার্জ: " + (s.di.known ? delText(s.di.charge) : "পরে জানানো হবে"));
+      if (data.note) m.push("📝 নোট: " + data.note);
+      B.store("bb_customer_v1", { name: data.name, phone: data.phone, address: data.address, district: data.district, upazila: data.upazila });
+      window.open(B.waLink(m.join("\n")), "_blank");
+    }
+
+    function review(data, s) {
+      var rows = Cart.lines().map(function (l) {
+        return '<div class="sum-item"><span>' + esc(l.product.name) + " <small>(" + B.sizeLabel(l.product, l.size) + " × " + bn(l.qty) + ")</small></span><strong>" + B.money(l.total) + "</strong></div>";
+      }).join("");
+      var bk = data.payment_method === "bkash"
+        ? "<p><b>bKash TrxID:</b> " + esc(data.bkash_txn) + "<br><b>যে নম্বর থেকে পাঠানো:</b> " + esc(bn(data.bkash_sender)) +
+          '<br><small class="muted">আমরা নিজে হাতে পেমেন্ট মিলিয়ে দেখব; যাচাই না হওয়া পর্যন্ত স্ট্যাটাস “যাচাইয়ের অপেক্ষায়” থাকবে।</small></p>'
+        : "";
+      var m = openModal(
+        "<h2>অর্ডার পর্যালোচনা</h2>" + rows +
+        '<div class="sum-row"><span>পণ্যের মূল্য</span><strong>' + B.money(s.sub) + "</strong></div>" +
+        '<div class="sum-row"><span>ডেলিভারি চার্জ</span><strong>' + delText(s.del, !s.di.known) + "</strong></div>" +
+        '<div class="sum-row sum-total"><span>সর্বমোট</span><strong>' + B.money(s.total) + (s.di.known ? "" : " + ডেলিভারি") + "</strong></div>" +
+        (s.di.known ? "" : '<p class="hint">ডেলিভারি চার্জ আমরা অর্ডারের পর আপনাকে জানাব।</p>') +
+        "<hr><p><b>নাম:</b> " + esc(data.name) + "<br><b>মোবাইল:</b> " + esc(bn(data.phone)) + "<br><b>ঠিকানা:</b> " +
+        esc(data.address) + ", " + esc(data.upazila) + ", " + esc(data.district) + "<br><b>পেমেন্ট:</b> " + esc(B.payLabel(data.payment_method)) + "</p>" + bk +
+        '<p class="err" id="modalErr" role="alert"></p>' +
+        '<div class="modal-actions"><button type="button" class="btn btn-outline" id="mEdit">তথ্য বদলান</button>' +
+        '<button type="button" class="btn btn-lg" id="mOk">অর্ডার নিশ্চিত করুন</button></div>'
+      );
+      m.el.querySelector("#mEdit").addEventListener("click", m.close);
+      var ok = m.el.querySelector("#mOk");
+      ok.addEventListener("click", function () {
+        if (busy) return;
+        busy = true;
+        ok.disabled = true;
+        ok.innerHTML = '<span class="spinner" aria-hidden="true"></span> অর্ডার তৈরি হচ্ছে…';
+        var payload = {
+          name: data.name, phone: data.phone, address: data.address, upazila: data.upazila, district: data.district, note: data.note,
+          payment_method: data.payment_method, website: form.elements.website.value,
+          expected_total: s.total,
+          items: Cart.items().map(function (it) { return { id: it.id, size: it.size, qty: it.qty }; }),
+        };
+        if (data.payment_method === "bkash") { payload.bkash_txn = data.bkash_txn; payload.bkash_sender = data.bkash_sender; }
+        window.BBAPI.rpc("place_order", payload).then(function (r) {
+          if (!r.ok) {
+            busy = false;
+            ok.disabled = false;
+            ok.textContent = "আবার চেষ্টা করুন";
+            if (r.code === "price_changed") {
+              window.BBAPI.clearCache();
+              m.el.querySelector("#modalErr").textContent = "ইতিমধ্যে কোনো পণ্যের দাম বা ডেলিভারি চার্জ বদলেছে। পেজটি নতুন করে লোড হচ্ছে, দামটি দেখে আবার অর্ডার করুন।";
+              setTimeout(function () { window.location.reload(); }, 2800);
+              return;
+            }
+            m.el.querySelector("#modalErr").textContent = errText(r);
+            return;
+          }
+          var o = r.data;
+          B.store("bb_customer_v1", { name: data.name, phone: data.phone, address: data.address, district: data.district, upazila: data.upazila });
+          B.store(B.ORDER_KEY, {
+            id: o.order_id, createdAt: o.created_at, phone: data.phone, name: data.name, address: data.address, upazila: data.upazila, district: data.district,
+            paymentMethod: o.payment_method, paymentStatus: o.payment_status, orderStatus: o.order_status,
+            bkashTxn: data.bkash_txn || "", bkashSender: data.bkash_sender || "",
+            items: o.items, subtotal: o.subtotal, delivery: o.delivery, deliveryPending: o.delivery_pending, total: o.total,
+          });
+          Cart.clear();
+          window.location.href = "success.html";
+        });
+      });
+    }
+  }
+
+  function copyText(t) {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(function () { B.toast("কপি হয়েছে"); }, function () { B.toast("কপি করা যায়নি"); });
+      else {
+        var ta = document.createElement("textarea");
+        ta.value = t; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); B.toast("কপি হয়েছে");
+      }
+    } catch (e) { B.toast("কপি করা যায়নি – লেখাটি চেপে ধরে কপি করুন"); }
   }
 
   /* ============================ অর্ডার সফল ============================ */
   function pageSuccess() {
     var host = $("#successHost");
     var o = B.store(B.ORDER_KEY);
-    if (!o || !o.items) {
+    if (!o || !o.items || !o.id) {
       host.innerHTML =
-        '<div class="notice"><div class="big-ico" aria-hidden="true">📦</div><h2>কোনো সাম্প্রতিক অর্ডার নেই</h2><p>নতুন অর্ডার করতে দোকানে যান।</p><a class="btn" href="shop.html">কেনাকাটা শুরু করুন</a></div>';
+        '<div class="notice"><div class="big-ico" aria-hidden="true">📦</div><h2>কোনো সাম্প্রতিক অর্ডার নেই</h2><p>নতুন অর্ডার করতে দোকানে যান, অথবা পুরনো অর্ডারের অবস্থা দেখতে ট্র্যাক করুন।</p><a class="btn" href="shop.html">কেনাকাটা শুরু করুন</a> <a class="btn btn-outline" href="track.html">অর্ডার ট্র্যাক করুন</a></div>';
       return;
     }
-    var items = o.items
-      .map(function (i) {
-        return '<div class="sum-item"><span>' + esc(i.name) + " <small>(" + esc(i.sizeLabel) + " × " + B.toBn(i.qty) + ")</small></span><strong>" + B.money(i.total) + "</strong></div>";
-      })
-      .join("");
+    var items = o.items.map(function (i) {
+      var p = B.getProduct(i.id);
+      var lbl = p ? B.sizeLabel(p, Number(i.size)) : String(i.size);
+      return '<div class="sum-item"><span>' + esc(i.name) + " <small>(" + esc(lbl) + " × " + bn(i.qty) + ")</small></span><strong>" + B.money(i.total) + "</strong></div>";
+    }).join("");
+    var msg = B.buildOrderMessage(o);
+    var bk = o.paymentMethod === "bkash"
+      ? '<div class="callout">আপনার bKash পেমেন্ট এখন <b>“যাচাইয়ের অপেক্ষায় (Pending Verification)”</b>। আমরা নিজে হাতে মিলিয়ে দেখে অর্ডার নিশ্চিত করব – এটি স্বয়ংক্রিয়ভাবে যাচাই হয় না।</div>'
+      : "";
     host.innerHTML =
-      '<div class="success-card"><div class="big-ico ok" aria-hidden="true">✅</div>' +
-      "<h1>আপনার অর্ডার তৈরি হয়েছে!</h1>" +
-      '<p class="lead">অর্ডার নম্বর: <strong>' + esc(B.toBn(o.id)) + "</strong></p>" +
-      '<div class="callout"><strong>গুরুত্বপূর্ণ:</strong> অর্ডারটি আমাদের কাছে পৌঁছাতে WhatsApp-এ তৈরি মেসেজটি <b>অবশ্যই “Send” করুন</b>। ' +
-      "WhatsApp না খুললে নিচের বাটনে চাপ দিন।</div>" +
-      '<a class="btn btn-wa btn-lg" target="_blank" rel="noopener" href="' + esc(o.waUrl) + '">' + B.ICON.wa + " WhatsApp-এ অর্ডার পাঠান</a>" +
+      '<div class="success-card"><div class="check-anim" aria-hidden="true"><svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24"/><path d="M14 27l8 8 16-17"/></svg></div>' +
+      "<h1>আপনার অর্ডার গ্রহণ করা হয়েছে!</h1>" +
+      '<div class="oid-box"><span>আপনার অর্ডার নম্বর</span><strong id="oid">' + esc(o.id) + '</strong><button type="button" class="btn btn-sm btn-outline" id="copyOid">কপি করুন</button></div>' +
+      '<p class="muted">এই নম্বরটি ও অর্ডারে দেওয়া মোবাইল নম্বর দিয়ে যেকোনো সময় অর্ডারের অবস্থা দেখতে পারবেন। নম্বরটি সংরক্ষণ করুন।</p>' + bk +
+      '<div class="callout"><strong>দ্রুত কনফার্মেশনের জন্য:</strong> নিচের বাটনে WhatsApp খুলে তৈরি মেসেজটি আপনি নিজে “Send” করুন। (অর্ডার আমাদের সিস্টেমে ইতিমধ্যে সেভ হয়েছে; মেসেজ পাঠানো ঐচ্ছিক।)</div>' +
+      '<a class="btn btn-wa btn-lg" target="_blank" rel="noopener" href="' + esc(B.waLink(msg)) + '">' + B.ICON.wa + " WhatsApp-এ মেসেজ পাঠান</a> " +
+      '<a class="btn btn-outline btn-lg" href="track.html?id=' + encodeURIComponent(o.id) + '">অর্ডার ট্র্যাক করুন</a>' +
       '<div class="summary summary-flat"><h2>অর্ডারের বিবরণ</h2>' + items +
       '<div class="sum-row"><span>পণ্যের মূল্য</span><strong>' + B.money(o.subtotal) + "</strong></div>" +
-      '<div class="sum-row"><span>ডেলিভারি চার্জ</span><strong>' + (o.delivery === 0 ? "ফ্রি" : B.money(o.delivery)) + "</strong></div>" +
-      '<div class="sum-row sum-total"><span>সর্বমোট</span><strong>' + B.money(o.total) + "</strong></div>" +
-      '<hr><p><b>নাম:</b> ' + esc(o.name) + "<br><b>মোবাইল:</b> " + esc(B.toBn(o.phone)) + "<br><b>ঠিকানা:</b> " +
+      '<div class="sum-row"><span>ডেলিভারি চার্জ</span><strong>' + delText(o.delivery, o.deliveryPending) + "</strong></div>" +
+      '<div class="sum-row sum-total"><span>সর্বমোট</span><strong>' + B.money(o.total) + (o.deliveryPending ? " + ডেলিভারি" : "") + "</strong></div>" +
+      '<div class="sum-row"><span>পেমেন্ট</span><span>' + esc(B.payLabel(o.paymentMethod)) + " – " + esc(PAYSTAT[o.paymentStatus] || "") + "</span></div>" +
+      (o.deliveryPending ? '<p class="hint">ডেলিভারি চার্জ নির্ধারণ করে আমরা আপনাকে জানাব।</p>' : "") +
+      '<hr><p><b>নাম:</b> ' + esc(o.name) + "<br><b>মোবাইল:</b> " + esc(bn(o.phone)) + "<br><b>ঠিকানা:</b> " +
       esc(o.address) + ", " + esc(o.upazila) + ", " + esc(o.district) + "</p></div>" +
       '<a class="btn btn-outline" href="shop.html">আরও কেনাকাটা করুন</a></div>';
+    $("#copyOid").addEventListener("click", function () { copyText(o.id); });
+  }
+
+  /* ============================ অর্ডার ট্র্যাকিং ============================ */
+  function pageTrack() {
+    var form = $("#trackForm"), out = $("#trackOut"), btn = $("#trackBtn");
+    var last = B.store(B.ORDER_KEY);
+    var qid = B.param("id") || (last && last.id) || "";
+    form.elements.oid.value = qid;
+    if (last && last.phone && (!B.param("id") || B.param("id") === last.id)) form.elements.phone.value = last.phone;
+    if (!CFG.dbConnected) {
+      out.innerHTML = '<div class="notice"><p>অনলাইন ট্র্যাকিং এখনো চালু হয়নি। অর্ডারের অবস্থা জানতে WhatsApp-এ যোগাযোগ করুন।</p></div>';
+      btn.disabled = true;
+      return;
+    }
+    var busy = false;
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (busy) return;
+      var oid = form.elements.oid.value.trim().toUpperCase();
+      var phone = form.elements.phone.value.replace(/[\s\-]/g, "").replace(/[০-৯]/g, function (d) { return "০১২৩৪৫৬৭৮৯".indexOf(d); }).replace(/^\+?88/, "");
+      $("#err-oid").textContent = /^BB-\d{6}-[A-Z0-9]{6}$/.test(oid) ? "" : "অর্ডার নম্বর এভাবে লিখুন: BB-261118-K7M2PX";
+      $("#err-tphone").textContent = /^01[3-9]\d{8}$/.test(phone) ? "" : "সঠিক মোবাইল নম্বর দিন।";
+      if ($("#err-oid").textContent || $("#err-tphone").textContent) return;
+      busy = true; btn.disabled = true; btn.innerHTML = '<span class="spinner" aria-hidden="true"></span> খোঁজা হচ্ছে…';
+      window.BBAPI.rpc("track_order", { p_order_id: oid, p_phone: phone }).then(function (r) {
+        busy = false; btn.disabled = false; btn.textContent = "অর্ডার খুঁজুন";
+        if (!r.ok) { out.innerHTML = '<div class="notice err-box">' + esc(r.code === "network" ? ERR.network : ERR.server) + "</div>"; return; }
+        var d = r.data;
+        if (!d || !d.ok) {
+          var m = d && d.error === "too_many_attempts"
+            ? "অনেকবার ভুল চেষ্টা হয়েছে। ১৫ মিনিট পর আবার চেষ্টা করুন।"
+            : d && d.error === "invalid" ? "অর্ডার নম্বর বা মোবাইল নম্বরের ফরম্যাট সঠিক নয়।"
+            : "এই অর্ডার নম্বর ও মোবাইল নম্বরের সঙ্গে মেলে এমন কোনো অর্ডার পাওয়া যায়নি। দুটোই ঠিক আছে কি না দেখুন।";
+          out.innerHTML = '<div class="notice err-box">' + esc(m) + "</div>";
+          return;
+        }
+        renderTrack(d.order);
+      });
+    });
+    if (qid && form.elements.phone.value) form.requestSubmit ? form.requestSubmit() : form.dispatchEvent(new Event("submit", { cancelable: true }));
+
+    function renderTrack(o) {
+      var steps = ["অর্ডার গৃহীত", "পেমেন্ট নিশ্চিত", "প্রস্তুত হচ্ছে", "পাঠানো হয়েছে", "ডেলিভারি সম্পন্ন"];
+      var idx = { pending: 0, payment_pending: 0, paid: 1, processing: 2, shipped: 3, delivered: 4 }[o.order_status];
+      var tl;
+      if (o.order_status === "cancelled") tl = '<div class="callout cancelled">এই অর্ডারটি বাতিল করা হয়েছে।</div>';
+      else
+        tl = '<ol class="timeline">' + steps.map(function (s, i) {
+          var cls = i < idx ? "done" : i === idx ? "now" : "";
+          /* COD-তে "পেমেন্ট নিশ্চিত" ধাপ ডেলিভারির সময়; তাই COD-তে ঐ ধাপ হালকা দেখাই */
+          if (i === 1 && o.payment_method === "cod" && idx < 1) cls = "skip";
+          return '<li class="' + cls + '"><span class="dot"></span>' + esc(s) + "</li>";
+        }).join("") + "</ol>";
+      var items = o.items.map(function (i) {
+        return '<div class="sum-item"><span>' + esc(i.name) + " <small>(" + bn(i.size) + " " + esc(i.unit || "") + " × " + bn(i.qty) + ")</small></span><strong>" + B.money(i.total) + "</strong></div>";
+      }).join("");
+      out.innerHTML =
+        '<div class="track-card"><h2>অর্ডার ' + esc(o.order_id) + "</h2>" +
+        '<p class="muted">অর্ডারের সময়: ' + esc(fmtDate(o.created_at)) + " • সর্বশেষ আপডেট: " + esc(fmtDate(o.updated_at)) + "</p>" +
+        '<p class="status-now">' + esc(STATUS[o.order_status] || o.order_status) + "</p>" + tl +
+        '<div class="sum-row"><span>পেমেন্ট পদ্ধতি</span><strong>' + esc(B.payLabel(o.payment_method)) + "</strong></div>" +
+        '<div class="sum-row"><span>পেমেন্ট অবস্থা</span><strong>' + esc(PAYSTAT[o.payment_status] || o.payment_status) + "</strong></div>" +
+        "<hr>" + items +
+        '<div class="sum-row"><span>পণ্যের মূল্য</span><strong>' + B.money(o.subtotal) + "</strong></div>" +
+        '<div class="sum-row"><span>ডেলিভারি চার্জ</span><strong>' + delText(Number(o.delivery), o.delivery_pending) + "</strong></div>" +
+        '<div class="sum-row sum-total"><span>সর্বমোট</span><strong>' + B.money(Number(o.total)) + (o.delivery_pending ? " + ডেলিভারি" : "") + "</strong></div>" +
+        '<p class="hint">কোনো প্রশ্ন থাকলে <a target="_blank" rel="noopener" href="' + esc(B.waLink("আসসালামু আলাইকুম, আমার অর্ডার নম্বর " + o.order_id + " সম্পর্কে জানতে চাই।")) + '">WhatsApp-এ জানান</a>।</p></div>';
+      try { out.scrollIntoView({ behavior: "smooth", block: "start" }); } catch (e) {}
+    }
+  }
+
+  /* ============================ সাধারণ প্রশ্ন ============================ */
+  function pageFaq() {
+    var list = CFG.faqs || [];
+    $("#faqList").innerHTML = list.length
+      ? list.map(function (f) {
+          return '<details class="faq"><summary>' + esc(f.q) + "</summary><p>" + esc(f.a) + "</p></details>";
+        }).join("")
+      : '<p class="empty">শীঘ্রই প্রশ্নোত্তর যোগ হবে।</p>';
+    $("#faqWa").href = B.waLink("আসসালামু আলাইকুম, আমার একটি প্রশ্ন আছে।");
+  }
+
+  /* ============================ পছন্দের তালিকা ============================ */
+  function pageWishlist() {
+    var gridEl = $("#wishGrid");
+    function render() {
+      var ids = B.Wish.ids();
+      var list = ids.map(B.getProduct).filter(Boolean);
+      grid(gridEl, list, "");
+      if (!list.length)
+        gridEl.innerHTML = '<div class="notice" style="grid-column:1/-1"><div class="big-ico" aria-hidden="true">♡</div><h2>পছন্দের তালিকা খালি</h2><p>পণ্যের কার্ডের হৃদয় চিহ্নে চাপ দিয়ে পছন্দের পণ্য এখানে রাখুন। (তালিকাটি শুধু এই ডিভাইসে সংরক্ষিত থাকে।)</p><a class="btn" href="shop.html">পণ্য দেখুন</a></div>';
+      B.Wish.refresh();
+    }
+    document.addEventListener("bb:wish", render);
+    render();
   }
 
   /* ============================ যোগাযোগ ============================ */
@@ -649,51 +919,10 @@
       .join("");
   }
 
-  /* ============================ অ্যাডমিন হেল্পার (পণ্যের কোড বানায়) ============================ */
-  function pageAdmin() {
-    var catSel = $("#a_cat");
-    catSel.innerHTML = CFG.categories.map(function (c) { return '<option value="' + esc(c.id) + '">' + esc(c.name) + " (" + esc(c.id) + ")</option>"; }).join("");
-    var form = $("#adminForm");
-    function slug(s) { return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, ""); }
-    form.addEventListener("submit", function (e) {
-      e.preventDefault();
-      var f = form.elements;
-      var id = slug(f.id.value);
-      var err = $("#a_err");
-      err.textContent = "";
-      if (!id) { err.textContent = "পণ্যের id ইংরেজি অক্ষর/সংখ্যায় লিখুন (যেমন: lichu-honey)।"; return; }
-      if (B.getProduct(id)) { err.textContent = "এই id আগে থেকেই আছে। অন্য id দিন।"; return; }
-      if (!f.name.value.trim()) { err.textContent = "পণ্যের নাম লিখুন।"; return; }
-      var price = parseFloat(f.price.value);
-      if (!(price > 0)) { err.textContent = "সঠিক দাম লিখুন।"; return; }
-      var sizes = f.sizes.value.split(",").map(function (x) { return parseFloat(x.trim()); }).filter(function (x) { return x > 0; });
-      if (!sizes.length) sizes = [1];
-      var obj = {
-        id: id, name: f.name.value.trim(), category: f.category.value, price: price, unit: f.unit.value.trim() || "কেজি",
-        sizes: sizes, image: "images/products/" + (f.image.value.trim() || id + ".jpg"),
-        short: f.short.value.trim(), description: f.description.value.trim(),
-        features: f.features.value.split("\n").map(function (x) { return x.trim(); }).filter(Boolean),
-        popular: f.popular.checked, isNew: f.isNew.checked, inStock: true,
-      };
-      var code = "  " + JSON.stringify(obj, null, 2).replace(/\n/g, "\n  ") + ",";
-      $("#a_out").value = code;
-      $("#a_result").hidden = false;
-      $("#a_link").textContent = "landing.html?id=" + id;
-    });
-    $("#a_copy").addEventListener("click", function () {
-      var ta = $("#a_out");
-      ta.select();
-      try {
-        if (navigator.clipboard) navigator.clipboard.writeText(ta.value);
-        else document.execCommand("copy");
-        B.toast("কপি হয়েছে");
-      } catch (e) { B.toast("লেখাটি চেপে ধরে কপি করুন"); }
-    });
-  }
-
   var PAGES = {
     home: pageHome, shop: pageShop, categories: pageCategories, product: pageProduct, landing: pageLanding,
-    cart: pageCart, checkout: pageCheckout, success: pageSuccess, contact: pageContact, about: pageAbout, admin: pageAdmin,
+    cart: pageCart, checkout: pageCheckout, success: pageSuccess, contact: pageContact, about: pageAbout,
+    track: pageTrack, faq: pageFaq, wishlist: pageWishlist,
   };
 
   function run() {

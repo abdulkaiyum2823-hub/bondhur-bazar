@@ -7,8 +7,10 @@
 
   var CFG = window.BB_CONFIG;
   var PRODUCTS = window.BB_PRODUCTS || [];
+  var BB;
   var CART_KEY = "bb_cart_v1";
   var ORDER_KEY = "bb_last_order_v1";
+  var WISH_KEY = "bb_wish_v1";
 
   /* ---------------- ছোট সাহায্যকারী ---------------- */
   var BN = ["০", "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯"];
@@ -48,7 +50,8 @@
 
   /* ---------------- পণ্য ---------------- */
   function getProduct(id) {
-    for (var i = 0; i < PRODUCTS.length; i++) if (PRODUCTS[i].id === id) return PRODUCTS[i];
+    var L = window.BB_PRODUCTS || PRODUCTS;
+    for (var i = 0; i < L.length; i++) if (L[i].id === id) return L[i];
     return null;
   }
   function getCategory(id) {
@@ -66,26 +69,38 @@
     }
     return toBn(size) + " " + unit;
   }
+  /* অফার থাকলে অফারের দাম, না থাকলে সাধারণ দাম (সার্ভারেও একই নিয়মে হিসাব হয়) */
+  function unitBase(p) {
+    return p.offerPrice != null && p.offerPrice < p.price ? p.offerPrice : p.price;
+  }
+  function hasOffer(p) {
+    return p.offerPrice != null && p.offerPrice < p.price;
+  }
   function priceFor(p, size) {
+    return Math.round(unitBase(p) * size);
+  }
+  function regularPriceFor(p, size) {
     return Math.round(p.price * size);
   }
   /* কার্ড ও সর্টের জন্য ডিফল্ট দাম (১ কেজি/১ ইউনিট) */
   function basePriceLabel(p) {
-    return money(p.price) + " / " + (p.unit || "কেজি");
+    return money(unitBase(p)) + " / " + (p.unit || "কেজি");
+  }
+  function priceHtml(p) {
+    return hasOffer(p)
+      ? '<span class="price-now">' + basePriceLabel(p) + '</span> <del class="price-old">' + money(p.price) + "</del>"
+      : '<span class="price-now">' + basePriceLabel(p) + "</span>";
   }
 
   /* ---------------- ছবি (না থাকলে প্লেসহোল্ডার) ---------------- */
   function placeholder(p) {
-    var cat = getCategory(p.category);
     var name = p.name.length > 22 ? p.name.slice(0, 21) + "…" : p.name;
     var svg =
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">' +
-      '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' +
-      '<stop offset="0" stop-color="#FFF9ED"/><stop offset="1" stop-color="#F6E3B4"/></linearGradient></defs>' +
-      '<rect width="400" height="400" fill="url(#g)"/>' +
-      '<text x="200" y="215" font-size="130" text-anchor="middle">' + cat.icon + "</text>" +
-      '<text x="200" y="310" font-size="26" text-anchor="middle" fill="#14532D" font-family="sans-serif">' +
-      esc(name) + "</text></svg>";
+      '<rect width="400" height="400" fill="#F3EEDD"/>' +
+      '<rect x="20" y="20" width="360" height="360" rx="18" fill="none" stroke="#D9CFAF" stroke-dasharray="8 8" stroke-width="3"/>' +
+      '<text x="200" y="190" font-size="24" text-anchor="middle" fill="#8A8260" font-family="sans-serif">ছবি শীঘ্রই আসছে</text>' +
+      '<text x="200" y="232" font-size="26" text-anchor="middle" fill="#14532D" font-family="sans-serif">' + esc(name) + "</text></svg>";
     return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
   }
   function imgTag(p, cls) {
@@ -140,6 +155,8 @@
       });
       if (!found) items.push({ id: id, size: size, qty: qty });
       Cart.save(items);
+      var cb = document.querySelector(".cart-btn");
+      if (cb) { cb.classList.remove("bump"); void cb.offsetWidth; cb.classList.add("bump"); }
       return true;
     },
     setQty: function (id, size, qty) {
@@ -192,45 +209,73 @@
     },
   };
 
+  /* ---------------- পছন্দের তালিকা (শুধু এই ডিভাইসে, LocalStorage) ---------------- */
+  var Wish = {
+    ids: function () {
+      var r = store(WISH_KEY);
+      return Array.isArray(r) ? r.filter(function (id) { return getProduct(id); }) : [];
+    },
+    has: function (id) { return Wish.ids().indexOf(id) !== -1; },
+    toggle: function (id) {
+      var a = store(WISH_KEY);
+      a = Array.isArray(a) ? a : [];
+      var i = a.indexOf(id);
+      if (i === -1) a.push(id); else a.splice(i, 1);
+      store(WISH_KEY, a);
+      Wish.refresh();
+      document.dispatchEvent(new CustomEvent("bb:wish"));
+      return i === -1;
+    },
+    refresh: function () {
+      var n = Wish.ids().length;
+      Array.prototype.forEach.call(document.querySelectorAll("[data-wish-count]"), function (e) {
+        e.textContent = toBn(n); e.hidden = n === 0;
+      });
+      Array.prototype.forEach.call(document.querySelectorAll("[data-wish]"), function (b) {
+        var on = Wish.has(b.getAttribute("data-wish"));
+        b.classList.toggle("on", on);
+        b.setAttribute("aria-pressed", on ? "true" : "false");
+        b.setAttribute("aria-label", on ? "পছন্দের তালিকা থেকে বাদ দিন" : "পছন্দের তালিকায় রাখুন");
+      });
+    },
+  };
+  function heartBtn(id) {
+    return '<button type="button" class="heart" data-wish="' + esc(id) + '" aria-pressed="false" aria-label="পছন্দের তালিকায় রাখুন">' + ICON.heart.replace('width="20" height="20"', 'width="22" height="22"') + "</button>";
+  }
+
   /* ---------------- ডেলিভারি ও WhatsApp ---------------- */
-  function deliveryCharge(district, subtotal) {
-    var d = CFG.delivery;
-    if (d.freeAbove > 0 && subtotal >= d.freeAbove) return 0;
-    if (!district) return d.outsideCharge;
-    return district === d.insideDistrict ? d.insideCharge : d.outsideCharge;
+  /* ডেলিভারি চার্জ: { pending:true } হলে অ্যাডমিন এখনো চার্জ ঠিক করেননি – অনুমান করা হয় না */
+  function deliveryInfo(district, subtotal) {
+    var d = CFG.delivery || {};
+    var c = null;
+    if (district && d.districtCharges && d.districtCharges[district] != null && d.districtCharges[district] !== "")
+      c = Number(d.districtCharges[district]);
+    if (c == null) c = district === d.insideDistrict ? d.insideCharge : d.outsideCharge;
+    if (!district) return { known: false, charge: null, reason: "district" };
+    if (c == null) return { known: false, charge: null, reason: "unset" };
+    if (d.freeAbove > 0 && subtotal >= d.freeAbove) return { known: true, charge: 0 };
+    return { known: true, charge: c };
   }
   function waLink(text) {
     return "https://wa.me/" + CFG.whatsappNumber + (text ? "?text=" + encodeURIComponent(text) : "");
   }
+  function payLabel(m) {
+    return m === "bkash" ? "bKash (Send Money)" : "ক্যাশ অন ডেলিভারি";
+  }
+  /* WhatsApp মেসেজ – ক্রেতা নিজে "Send" চাপবেন; অর্ডার ইতিমধ্যে ডাটাবেসে সেভ হয়ে গেছে */
   function buildOrderMessage(order) {
-    var line = "━━━━━━━━━━━━━━";
     var msg = [];
-    msg.push("🛒 *নতুন অর্ডার – " + CFG.siteName + "*");
-    if (order.id) msg.push("🧾 *অর্ডার নম্বর:* " + toBn(order.id));
-    msg.push(line);
-    msg.push("👤 *নাম:* " + order.name);
-    msg.push("📞 *মোবাইল:* " + toBn(order.phone));
-    msg.push("📍 *ঠিকানা:* " + order.address);
-    msg.push("🏘️ *উপজেলা:* " + order.upazila);
-    msg.push("🗺️ *জেলা:* " + order.district);
-    msg.push(line);
-    msg.push("📦 *অর্ডারকৃত পণ্য:*");
-    order.items.forEach(function (it, i) {
-      msg.push(
-        toBn(i + 1) + ". " + it.name + " (" + it.sizeLabel + ") × " + toBn(it.qty) +
-          "\n    " + money(it.unitPrice) + " × " + toBn(it.qty) + " = " + money(it.total)
-      );
-    });
-    msg.push(line);
-    msg.push("পণ্যের মূল্য: " + money(order.subtotal));
-    msg.push("ডেলিভারি চার্জ: " + (order.delivery === 0 ? "ফ্রি" : money(order.delivery)));
-    msg.push("💰 *সর্বমোট: " + money(order.total) + "*");
-    if (order.note) {
-      msg.push(line);
-      msg.push("📝 *নোট:* " + order.note);
+    msg.push("আসসালামু আলাইকুম, " + CFG.siteName + "-এ আমি অর্ডার করেছি।");
+    msg.push("🧾 অর্ডার নম্বর: " + order.id);
+    msg.push("💳 পেমেন্ট: " + payLabel(order.paymentMethod));
+    if (order.paymentMethod === "bkash") {
+      msg.push("TrxID: " + order.bkashTxn + " (পাঠানো নম্বর: " + order.bkashSender + ")");
     }
-    msg.push(line);
-    msg.push("অর্ডারটি কনফার্ম করার অনুরোধ রইল। ধন্যবাদ! 🙏");
+    msg.push("💰 মোট: " + money(order.total) + (order.deliveryPending ? " (ডেলিভারি চার্জ ছাড়া)" : ""));
+    msg.push("👤 নাম: " + order.name);
+    msg.push("📞 মোবাইল: " + order.phone);
+    msg.push("");
+    msg.push("অনুগ্রহ করে অর্ডারটি কনফার্ম করুন। ধন্যবাদ।");
     return msg.join("\n");
   }
   function buildSingleProductMessage(p, size, qty) {
@@ -286,6 +331,7 @@
   var ICON = {
     fb: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M13.5 22v-8.2h2.8l.5-3.3h-3.3V8.4c0-.9.4-1.7 1.8-1.7h1.6V3.8c-.3 0-1.3-.2-2.4-.2-2.5 0-4.1 1.5-4.1 4.2v2.7H7.6v3.3h2.8V22h3.1z"/></svg>',
     wa: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1-1.5-.7-2.4-1.3-3.4-2.9-.3-.4.3-.4.8-1.4.1-.2 0-.3 0-.5l-.8-1.9c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.7.7-1 1.4-1 2.3.1 1.1.5 2.1 1.2 3 1.4 1.8 3 3 5.2 3.8.7.2 1.2.3 1.7.2.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.5-.3z"/></svg>',
+    heart: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21.2l7.8-7.7 1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg>',
     cart: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.7 11.5a2 2 0 0 0 2 1.5h7.6a2 2 0 0 0 2-1.5L21 7H6"/></svg>',
   };
 
@@ -294,6 +340,8 @@
     { href: "index.html", label: "হোম", page: "home" },
     { href: "shop.html", label: "শপ", page: "shop" },
     { href: "categories.html", label: "ক্যাটাগরি", page: "categories" },
+    { href: "track.html", label: "অর্ডার ট্র্যাক", page: "track" },
+    { href: "faq.html", label: "সাধারণ প্রশ্ন", page: "faq" },
     { href: "about.html", label: "আমাদের সম্পর্কে", page: "about" },
     { href: "contact.html", label: "যোগাযোগ", page: "contact" },
   ];
@@ -317,6 +365,7 @@
       '<div class="header-actions">' +
       '<a class="icon-btn" href="' + esc(CFG.facebookUrl) + '" target="_blank" rel="noopener" aria-label="Facebook পেজ">' + ICON.fb + "</a>" +
       '<a class="icon-btn" href="' + waLink("") + '" target="_blank" rel="noopener" aria-label="WhatsApp-এ যোগাযোগ">' + ICON.wa + "</a>" +
+      '<a class="icon-btn" href="wishlist.html" aria-label="পছন্দের তালিকা">' + ICON.heart + '<span class="badge badge-heart" data-wish-count hidden>০</span></a>' +
       '<a class="icon-btn cart-btn" href="cart.html" aria-label="কার্ট">' + ICON.cart + '<span class="badge" data-cart-count hidden>০</span></a>' +
       "</div></div></div>";
 
@@ -346,11 +395,12 @@
       '<div class="footer-social">' +
       '<a class="icon-btn" href="' + esc(CFG.facebookUrl) + '" target="_blank" rel="noopener" aria-label="Facebook পেজ">' + ICON.fb + "</a>" +
       '<a class="icon-btn" href="' + waLink("") + '" target="_blank" rel="noopener" aria-label="WhatsApp">' + ICON.wa + "</a></div></div>" +
-      '<div><h4>দ্রুত লিংক</h4><ul>' + links + '<li><a href="cart.html">কার্ট</a></li><li><a href="checkout.html">চেকআউট</a></li></ul></div>' +
+      '<div><h4>দ্রুত লিংক</h4><ul>' + links + '<li><a href="wishlist.html">পছন্দের তালিকা</a></li><li><a href="cart.html">কার্ট</a></li><li><a href="checkout.html">চেকআউট</a></li></ul></div>' +
       '<div><h4>ক্যাটাগরি</h4><ul>' + cats + "</ul></div>" +
       '<div><h4>যোগাযোগ</h4><ul>' +
       '<li>WhatsApp: <a href="' + waLink("") + '" target="_blank" rel="noopener">' + toBn(CFG.whatsappDisplay) + "</a></li>" +
-      '<li>Facebook: <a href="' + esc(CFG.facebookUrl) + '" target="_blank" rel="noopener">' + esc(CFG.facebookName) + "</a></li></ul></div>" +
+      '<li>Facebook: <a href="' + esc(CFG.facebookUrl) + '" target="_blank" rel="noopener">' + esc(CFG.facebookName) + "</a></li>" +
+      (CFG.email ? '<li>ইমেইল: <a href="mailto:' + esc(CFG.email) + '">' + esc(CFG.email) + "</a></li>" : "") + "</ul></div>" +
       "</div>" +
       '<div class="footer-bottom"><div class="container">© ' + toBn(new Date().getFullYear()) + " " + esc(CFG.siteName) + " (" + esc(CFG.siteNameEn) + "). সর্বস্বত্ব সংরক্ষিত।</div></div>";
 
@@ -375,18 +425,19 @@
     var badges = "";
     if (out) badges += '<span class="tag tag-out">স্টক নেই</span>';
     else {
+      if (hasOffer(p)) badges += '<span class="tag tag-offer">অফার</span>';
       if (p.isNew) badges += '<span class="tag tag-new">নতুন</span>';
       if (p.popular) badges += '<span class="tag tag-pop">জনপ্রিয়</span>';
     }
     return (
       '<article class="card product-card">' +
       '<a class="card-img" href="product.html?id=' + encodeURIComponent(p.id) + '" aria-label="' + esc(p.name) + ' বিস্তারিত">' +
-      imgTag(p) + '<div class="tags">' + badges + "</div></a>" +
+      imgTag(p) + '<div class="tags">' + badges + "</div></a>" + heartBtn(p.id) +
       '<div class="card-body">' +
       '<div class="card-cat">' + esc(getCategory(p.category).name) + "</div>" +
       '<h3 class="card-title"><a href="product.html?id=' + encodeURIComponent(p.id) + '">' + esc(p.name) + "</a></h3>" +
       '<p class="card-short">' + esc(p.short || "") + "</p>" +
-      '<div class="card-price">' + basePriceLabel(p) + "</div>" +
+      '<div class="card-price">' + priceHtml(p) + "</div>" +
       '<div class="card-actions">' +
       '<a class="btn btn-outline btn-sm" href="product.html?id=' + encodeURIComponent(p.id) + '">বিস্তারিত</a>' +
       (out
@@ -409,11 +460,28 @@
     if (p && Cart.add(p.id, size, 1)) toast("✔ " + p.name + " (" + sizeLabel(p, size) + ") কার্টে যোগ হয়েছে");
   });
 
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest && e.target.closest("[data-wish]");
+    if (!b) return;
+    e.preventDefault();
+    var on = Wish.toggle(b.getAttribute("data-wish"));
+    b.classList.add("pop");
+    setTimeout(function () { b.classList.remove("pop"); }, 400);
+    toast(on ? "পছন্দের তালিকায় রাখা হয়েছে" : "পছন্দের তালিকা থেকে বাদ দেওয়া হয়েছে");
+  });
+
   /* ---------------- চালু করো ---------------- */
   function init() {
+    /* আগে ক্যাটালগ (পণ্য, দাম, ডেলিভারি সেটিংস) লোড; না পেলে নমুনা তথ্যে চলে */
+    var api = window.BBAPI;
+    var wait = api ? Promise.race([api.ready(), new Promise(function (r) { setTimeout(function () { r(false); }, 6000); })]) : Promise.resolve(false);
+    wait.then(boot, boot);
+  }
+  function boot() {
+    PRODUCTS = window.BB_PRODUCTS;
+    BB.PRODUCTS = PRODUCTS;
     renderHeader();
     renderFooter();
-    /* data-wa / data-fb দেওয়া সব লিংকে config.js-এর নম্বর ও Facebook লিংক বসাও */
     Array.prototype.forEach.call(document.querySelectorAll("[data-wa]"), function (a) {
       a.href = waLink("");
     });
@@ -421,13 +489,30 @@
       a.href = CFG.facebookUrl;
     });
     Cart.refreshBadge();
+    Wish.refresh();
     document.addEventListener("bb:cart", Cart.refreshBadge);
-    window.addEventListener("storage", Cart.refreshBadge);
+    document.addEventListener("bb:wish", Wish.refresh);
+    window.addEventListener("storage", function () { Cart.refreshBadge(); Wish.refresh(); });
     window.BB_READY = true;
     document.dispatchEvent(new CustomEvent("bb:ready"));
+    setTimeout(reveal, 60);
+  }
+  /* হালকা স্ক্রল অ্যানিমেশন (ব্রাউজার না পারলে সরাসরি দেখায়) */
+  function reveal() {
+    var els = document.querySelectorAll(".product-card, .feature, .cat-card, .faq");
+    if (!("IntersectionObserver" in window) || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    var io = new IntersectionObserver(function (en) {
+      en.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } });
+    }, { rootMargin: "0px 0px -30px 0px" });
+    Array.prototype.forEach.call(els, function (el) {
+      var r = el.getBoundingClientRect();
+      if (r.top < window.innerHeight) return;
+      el.classList.add("reveal");
+      io.observe(el);
+    });
   }
 
-  window.BB = {
+  window.BB = BB = {
     CFG: CFG,
     PRODUCTS: PRODUCTS,
     ORDER_KEY: ORDER_KEY,
@@ -441,11 +526,18 @@
     sizesOf: sizesOf,
     sizeLabel: sizeLabel,
     priceFor: priceFor,
+    regularPriceFor: regularPriceFor,
+    unitBase: unitBase,
+    hasOffer: hasOffer,
+    priceHtml: priceHtml,
+    Wish: Wish,
+    heartBtn: heartBtn,
+    payLabel: payLabel,
     basePriceLabel: basePriceLabel,
     placeholder: placeholder,
     imgTag: imgTag,
     Cart: Cart,
-    deliveryCharge: deliveryCharge,
+    deliveryInfo: deliveryInfo,
     waLink: waLink,
     buildOrderMessage: buildOrderMessage,
     buildSingleProductMessage: buildSingleProductMessage,

@@ -44,22 +44,22 @@ window.BB_CONFIG = {
     {
       image: "images/banners/slide-2.jpg", mobileImage: "",
       title: "ফুলের মধু", subtitle: "কালোজিরা, সরিষা, খলিশা, বরই ও লিচু ফুলের মধু",
-      buttonText: "মধু দেখুন", buttonLink: "shop.html?cat=honey", theme: "gold", art: "🍯",
+      buttonText: "মধু দেখুন", buttonLink: "shop.html?cat=honey", theme: "gold", art: "logo",
     },
     {
       image: "images/banners/slide-3.jpg", mobileImage: "",
       title: "খেজুর ও খেজুরের গুড়", subtitle: "শীতের ঐতিহ্যবাহী স্বাদ",
-      buttonText: "Shop Now", buttonLink: "shop.html?cat=dates", theme: "brown", art: "🌴",
+      buttonText: "Shop Now", buttonLink: "shop.html?cat=dates", theme: "brown", art: "logo",
     },
     {
       image: "images/banners/slide-4.jpg", mobileImage: "",
       title: "বাদাম ও ড্রাই ফ্রুটস", subtitle: "নাস্তা ও মিষ্টান্নের জন্য নানা রকম বাদাম ও শুকনো ফল",
-      buttonText: "Shop Now", buttonLink: "shop.html?cat=nuts", theme: "olive", art: "🥜",
+      buttonText: "Shop Now", buttonLink: "shop.html?cat=nuts", theme: "olive", art: "logo",
     },
     {
       image: "images/banners/slide-5.jpg", mobileImage: "",
       title: "আমাদের জনপ্রিয় পণ্য", subtitle: "ক্রেতাদের পছন্দের সেরা সংগ্রহ",
-      buttonText: "জনপ্রিয় পণ্য দেখুন", buttonLink: "shop.html?filter=popular", theme: "dark", art: "🛍️",
+      buttonText: "জনপ্রিয় পণ্য দেখুন", buttonLink: "shop.html?filter=popular", theme: "dark", art: "logo",
     },
   ],
 
@@ -74,19 +74,37 @@ window.BB_CONFIG = {
   facebookUsername: "BondhurBazarbd",
   address: "বাংলাদেশ (সারা দেশে ডেলিভারি)",
 
-  /* ---------- ডেলিভারি ---------- */
-  /* ⚠️ নিচের চার্জ নমুনা মাত্র – আপনার আসল চার্জ বসান */
+  /* ---------- ডেলিভারি ----------
+     ⚠️ ডেলিভারি চার্জ আমি অনুমান করি না। Supabase চালু থাকলে চার্জ অ্যাডমিন সেটিংস (settings টেবিল) থেকে আসে।
+     মান null থাকলে ক্রেতাকে দেখানো হয় "ডেলিভারি চার্জ অর্ডারের পর জানানো হবে"। */
   delivery: {
-    insideDistrict: "ঢাকা", // এই জেলায় কম চার্জ
-    insideCharge: 60, // ঢাকা জেলার ভেতরে (টাকা)
-    outsideCharge: 120, // ঢাকার বাইরে (টাকা)
-    freeAbove: 0, // এত টাকার বেশি কিনলে ডেলিভারি ফ্রি (০ = বন্ধ)
+    insideDistrict: "ঢাকা",
+    insideCharge: null,
+    outsideCharge: null,
+    freeAbove: 0,
+    districtCharges: {},
     note: "সারা বাংলাদেশে ডেলিভারি করা হয়।",
   },
 
-  /* চেকআউটে যে পেমেন্ট নোট দেখাবে */
-  paymentNote:
-    "অর্ডার WhatsApp-এ পাঠানোর পর আমরা কনফার্ম করব এবং পেমেন্ট পদ্ধতি জানিয়ে দেব।",
+  /* ---------- পেমেন্ট (Supabase না থাকলে এই মান ব্যবহার হয়) ---------- */
+  payment: {
+    codEnabled: true,
+    bkashEnabled: true,
+    bkashNumber: "01602975419",
+    bkashType: "Personal",
+    bkashMethod: "Send Money",
+  },
+
+  /* সাইটের যোগাযোগের ইমেইল */
+  email: "bondhurbazarbd@gmail.com",
+
+  /* জেলার তালিকা (Supabase চালু থাকলে সেখান থেকে আসে) – pages.js-এ DISTRICTS দেওয়া আছে */
+
+  /* সাধারণ প্রশ্ন (Supabase চালু থাকলে অ্যাডমিন থেকে বদলানো যাবে) */
+  faqs: [
+    { q: "কীভাবে অর্ডার করব?", a: "পছন্দের পণ্য কার্টে রেখে চেকআউটে ডেলিভারির তথ্য দিন, পেমেন্ট পদ্ধতি বেছে অর্ডার নিশ্চিত করুন। অর্ডার নম্বর পাবেন।" },
+    { q: "অর্ডারের অবস্থা কীভাবে জানব?", a: "‘অর্ডার ট্র্যাক করুন’ পেজে অর্ডার নম্বর ও অর্ডারে দেওয়া মোবাইল নম্বর দিন।" },
+  ],
 
   currency: "৳",
 
