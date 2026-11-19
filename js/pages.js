@@ -718,7 +718,7 @@
           items: Cart.items().map(function (it) { return { id: it.id, size: it.size, qty: it.qty }; }),
         };
         if (data.payment_method === "bkash") { payload.bkash_txn = data.bkash_txn; payload.bkash_sender = data.bkash_sender; }
-        window.BBAPI.rpc("place_order", payload).then(function (r) {
+        window.BBAPI.rpc("place_order", { payload: payload }).then(function (r) {
           if (!r.ok) {
             busy = false;
             ok.disabled = false;
