@@ -843,7 +843,7 @@
         tl = '<ol class="timeline">' + steps.map(function (s, i) {
           var cls = i < idx ? "done" : i === idx ? "now" : "";
           /* COD-তে "পেমেন্ট নিশ্চিত" ধাপ ডেলিভারির সময়; তাই COD-তে ঐ ধাপ হালকা দেখাই */
-          if (i === 1 && o.payment_method === "cod" && idx < 1) cls = "skip";
+          if (i === 1) cls = o.payment_status === "paid" ? "done" : o.payment_method === "cod" ? "skip" : "";
           return '<li class="' + cls + '"><span class="dot"></span>' + esc(s) + "</li>";
         }).join("") + "</ol>";
       var items = o.items.map(function (i) {
