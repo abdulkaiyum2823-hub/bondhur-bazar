@@ -354,7 +354,7 @@
       return '<a href="' + n.href + '"' + (n.page === cur ? ' class="active" aria-current="page"' : "") + ">" + n.label + "</a>";
     }).join("");
     host.innerHTML =
-      '<div class="topbar"><div class="container">🚚 সারা বাংলাদেশে ডেলিভারি &nbsp;•&nbsp; ' + esc(CFG.slogan) + "</div></div>" +
+      '<div class="topbar"><div class="container">' + (CFG.topbarText ? esc(CFG.topbarText) : "🚚 সারা বাংলাদেশে ডেলিভারি &nbsp;•&nbsp; " + esc(CFG.slogan)) + "</div></div>" +
       '<div class="header-main"><div class="container header-inner">' +
       '<button class="menu-btn" id="menuBtn" aria-label="মেনু খুলুন" aria-expanded="false" aria-controls="mainNav"><span></span><span></span><span></span></button>' +
       '<a class="brand" href="index.html" aria-label="' + esc(CFG.siteName) + ' – হোম">' +

@@ -108,6 +108,10 @@
         bkashMethod: p.bkash_method || "Send Money",
       };
     }
+    if (st.texts) {
+      if (st.texts.topbar) CFG.topbarText = st.texts.topbar;
+      if (st.texts.slogan) CFG.slogan = st.texts.slogan;
+    }
     if (st.contact) {
       var k = st.contact;
       if (k.whatsapp) CFG.whatsappNumber = k.whatsapp;
