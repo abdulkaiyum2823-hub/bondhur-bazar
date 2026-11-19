@@ -13,7 +13,9 @@
   var base = configured ? S.url.replace(/\/+$/, "") : "";
 
   function headers(extra) {
-    var h = { apikey: S.anonKey, Authorization: "Bearer " + S.anonKey, "Content-Type": "application/json" };
+    var h = { apikey: S.anonKey, "Content-Type": "application/json" };
+    /* পুরনো anon key (JWT, "eyJ...") হলে Bearer লাগে; নতুন sb_publishable_ key JWT নয়, তাই শুধু apikey */
+    if (/^eyJ/.test(S.anonKey || "")) h.Authorization = "Bearer " + S.anonKey;
     for (var k in extra || {}) h[k] = extra[k];
     return h;
   }
