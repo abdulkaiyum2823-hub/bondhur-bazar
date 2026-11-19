@@ -522,6 +522,7 @@
   };
   function errText(r) {
     var t = ERR[r.code] || ERR.server;
+    if (!ERR[r.code] && r.detail) t += " [কারিগরি তথ্য – " + r.detail + "]";
     return r.arg && (r.code === "out_of_stock" || r.code === "invalid_size") ? t + ": " + r.arg : t;
   }
 

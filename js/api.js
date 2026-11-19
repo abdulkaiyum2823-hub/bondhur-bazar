@@ -52,7 +52,7 @@
         if (x.status >= 200 && x.status < 300) return { ok: true, data: x.json };
         var msg = (x.json && (x.json.message || x.json.error)) || "";
         var m = /bb:([a-z_]+)(?::\s*(.*))?/.exec(msg);
-        return { ok: false, code: m ? m[1] : "server", arg: m && m[2] ? m[2] : "", status: x.status };
+        return { ok: false, code: m ? m[1] : "server", arg: m && m[2] ? m[2] : "", status: x.status, detail: m ? "" : (x.status + ": " + String(msg || JSON.stringify(x.json) || "").slice(0, 160)) };
       })
       .catch(function () { return { ok: false, code: "network" }; });
   }
