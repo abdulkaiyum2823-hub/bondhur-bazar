@@ -1,14 +1,5 @@
-/* ==========================================================================
-   Supabase সংযোগ সেটিংস
-   --------------------------------------------------------------------------
-   এখানে শুধু দুটি মান বসবে:
-     url     : Supabase → Project Settings → API → "Project URL"
-     anonKey : Supabase → Project Settings → API → "anon public" key
-   ⚠️ কখনোই "service_role" key এখানে বা কোনো পাবলিক ফাইলে দেবেন না।
-   anon key পাবলিক – এটি ওয়েবসাইটে থাকাই নিয়ম; ডেটার নিরাপত্তা দেয় ডাটাবেসের RLS নিয়ম।
-   ফাঁকা রাখলে সাইট পুরনো (শুধু WhatsApp) পদ্ধতিতে চলবে।
-   ========================================================================== */
+/* Supabase সংযোগ সেটিংস – শুধু পাবলিক (publishable) key। service_role/secret key কখনো এখানে নয়। */
 window.BB_SUPABASE = {
-  url: "",
-  anonKey: "",
+  url: "https://sogmxhauryejjqxfckgg.supabase.co",
+  anonKey: "sb_publishable_wyJ1rOTVBmJ6rmTPtMlLHQ_KWk5p6QJ",
 };
