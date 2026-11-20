@@ -10,7 +10,7 @@
 
   function opts(map, sel) { return Object.keys(map).map(function (k) { return '<option value="' + k + '"' + (k === sel ? " selected" : "") + ">" + esc(map[k]) + "</option>"; }).join(""); }
   function badge(v, map) { return '<span class="badge b-' + esc(v) + '">' + esc(map[v] || v) + "</span>"; }
-  function busy(btn, on, txt) { if (!btn) return; btn.disabled = on; if (txt) { if (on) { btn._t = btn.textContent; btn.textContent = txt; } else if (btn._t) btn.textContent = btn._t; } }
+  function busy(btn, on, txt) { if (!btn) return; btn.disabled = on; if (on) { if (txt) { btn._t = btn.textContent; btn.textContent = txt; } } else if (btn._t) { btn.textContent = btn._t; btn._t = null; } }
   function showErr(box, e) { box.textContent = e.message || String(e); box.hidden = false; box.className = "err"; }
   function modal(html) {
     var m = document.createElement("div"); m.className = "modal"; m.innerHTML = "<div>" + html + "</div>";
